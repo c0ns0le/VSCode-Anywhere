@@ -320,13 +320,12 @@ function InstallMSYS2 {
     Write-Output "nameserver 8.8.8.8`nnameserver 8.8.4.4" | Out-File -Encoding utf8 "${MSYS2AppPath_install}\etc\resolv.conf"
 
     # Need to login for init MSYS2 env
-    Output "Initializing $MSYS2AppName" | Tee-Object -a "`"$log`""
-    #Start-Process -Wait -FilePath "${MSYS2AppPath_install}\msys2_shell.cmd" -ArgumentList "''" | Tee-Object -a "`"$log`""
-    $process = Start-Process -Wait -PassThru -NoNewWindow -FilePath "${MSYS2AppPath_install}\msys2_shell.cmd" -ArgumentList "''"
+    Output "Initializing $MSYS2AppName" | Tee-Object -Append "$log"
+    #& "${MSYS2AppPath_install}\msys2_shell.cmd" '' | Tee-Object -Append "$log"
+    Start-Process -Wait -FilePath "${MSYS2AppPath_install}\msys2_shell.cmd" -ArgumentList "''" | Tee-Object -Append "$log"
 
     # Exit if failed
-    if ($process.ExitCode -eq 1 ) { OutputErrror "command failed => $cmd" -exit $true }
-
+    #if ($LastExitCode -eq 1 ) { OutputErrror "command failed => $cmd" -exit $true }
 
     # Upgrade MSYS2
     $update_cmd = 'pacman -Syu --noconfirm'
@@ -410,12 +409,11 @@ function InstallMSYS2Pkg([string[]]$pkg) {
 # Install VSCode plugins
 function InstallVSCPkg([string[]]$pkgs) {
     foreach ($pkg in $pkgs) {
-        output "Installing VSCode extension : $pkg" | Tee-Object -a "`"$log`""
-        #Start-Process -Wait -FilePath "${VSCAppPath_install}\bin\Code.cmd" -ArgumentList "--user-data-dir `"$VSCAppPath_user_data`" --extensions-dir `"$VSCAppPath_extensions`" --install-extension $pkg" | Tee-Object -a "`"$log`""
-        $process = Start-Process -Wait -PassThru -NoNewWindow -FilePath "${VSCAppPath_install}\bin\Code.cmd" -ArgumentList "--user-data-dir `"$VSCAppPath_user_data`" --extensions-dir `"$VSCAppPath_extensions`" --install-extension $pkg"
+        output "Installing VSCode extension : $pkg" | Tee-Object -Append "$log"
+        & "${VSCAppPath_install}\bin\Code.cmd" --user-data-dir "$VSCAppPath_user_data" --extensions-dir "$VSCAppPath_extensions" --install-extension "$pkg" | Tee-Object -Append "$log"
 
         # Warn if failed
-        if ($process.ExitCode -eq 1 ) { OutputErrror "command failed => $cmd" -exit $false }
+        if ($LastExitCode -eq 1 ) { OutputErrror "command failed => $cmd" -exit $false }
     }
 }
 
@@ -687,9 +685,10 @@ function MSYS2Cmd([string[]]$cmds, [string]$shell="$MSYS2AppPath_install\usr\bin
         "`n`n>>> $cmd <<<" | Out-File -Force -Append -Encoding utf8 "$log"
 
         # Run command (no translation variable here). If you need to translate vars, prefer run cmd
-        $process = Start-Process -Wait -PassThru -NoNewWindow -FilePath "$shell" -ArgumentList "$shell_args '($cmd) 2>&1 | tee -a `"$log`"'"
+        "$shell" $shell_args $cmd
+        #& "$shell" $shell_args $cmd | Tee-Object -Append "$log"
 
-        if ($process.ExitCode -eq 1 ) {
+        if ($LastExitCode -eq 1 ) {
             if ($exit) { OutputErrror "MSYS2 command failed => $cmd" }
             else { OutputErrror "MSYS2 command failed => $cmd" -exit $false }
         }
